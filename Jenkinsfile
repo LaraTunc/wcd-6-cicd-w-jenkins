@@ -78,6 +78,7 @@ pipeline {
             environment {
                 DEPLOYMENT_INSTANCE_IP = credentials('Deployment_Instance_IP')
                 DOCKER_CRED = credentials('Docker_Cred')
+                SSH_CRED = credentials('ssh_key')
                 }
             steps{
                 script{
@@ -85,7 +86,7 @@ pipeline {
 
                     sh '''
                         eval "$(ssh-agent -s)"
-                        ssh-add ~/.ssh/id_rsa
+                        ssh-add $SSH_CRED
                         ssh -o StrictHostKeyChecking=no ubuntu@$DEPLOYMENT_INSTANCE_IP "docker ps -a --format '{{.Names}}' | grep -q my-container && docker stop my-container && docker rm my-container || true"
                         ssh -o StrictHostKeyChecking=no ubuntu@$DEPLOYMENT_INSTANCE_IP "docker pull $DOCKER_CRED_USR/webpage:latest && docker run --name my-container -d -p 80:80 $DOCKER_CRED_USR/webpage:latest"
                         '''
