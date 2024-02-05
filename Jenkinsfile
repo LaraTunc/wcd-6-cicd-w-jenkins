@@ -22,7 +22,7 @@ pipeline {
         stage('Build') {
 
             environment {
-                DOCKER_CRED = credentials('Docker_Cred')
+                DOCKER_CRED = credentials('docker_cred')
                 }
 
             steps {
@@ -30,8 +30,8 @@ pipeline {
                 sh '''
                     . ${VIRTUALENV}/bin/activate
                     docker login --username ${DOCKER_CRED_USR} --password ${DOCKER_CRED_PSW}
-                    docker build -t ${DOCKER_CRED_USR}/webpage:latest -f Dockerfile .
-                    docker push ${DOCKER_CRED_USR}/webpage:latest
+                    docker build -t ${DOCKER_CRED_USR}/jenkins_test -f Dockerfile .
+                    docker push ${DOCKER_CRED_USR}/jenkins_test
                 '''
             }
         }
@@ -58,7 +58,7 @@ pipeline {
         stage('Push') {
 
             environment {
-                DOCKER_CRED = credentials('Docker_Cred')
+                DOCKER_CRED = credentials('docker_cred')
                 }
 
             steps {
@@ -67,7 +67,7 @@ pipeline {
                     // Push the newly built Docker image to Docker Hub repo
                     sh '''
                         . ${VIRTUALENV}/bin/activate
-                        docker push ${DOCKER_CRED_USR}/webpage:latest
+                        docker push ${DOCKER_CRED_USR}/jenkins_test
                     '''
                 }
             }
@@ -76,8 +76,8 @@ pipeline {
         stage('Deploy'){
 
             environment {
-                DEPLOYMENT_INSTANCE_IP = credentials('Deployment_Instance_IP')
-                DOCKER_CRED = credentials('Docker_Cred')
+                DEPLOYMENT_INSTANCE_IP = credentials('deployment_ip')
+                DOCKER_CRED = credentials('docker_cred')
                 SSH_CRED = credentials('ssh_key')
                 }
             steps{
@@ -88,7 +88,7 @@ pipeline {
                         eval "$(ssh-agent -s)"
                         ssh-add $SSH_CRED
                         ssh -o StrictHostKeyChecking=no ubuntu@$DEPLOYMENT_INSTANCE_IP "docker ps -a --format '{{.Names}}' | grep -q my-container && docker stop my-container && docker rm my-container || true"
-                        ssh -o StrictHostKeyChecking=no ubuntu@$DEPLOYMENT_INSTANCE_IP "docker pull $DOCKER_CRED_USR/webpage:latest && docker run --name my-container -d -p 80:80 $DOCKER_CRED_USR/webpage:latest"
+                        ssh -o StrictHostKeyChecking=no ubuntu@$DEPLOYMENT_INSTANCE_IP "docker pull $DOCKER_CRED_USR/jenkins_test && docker run --name my-container -d -p 80:80 $DOCKER_CRED_USR/jenkins_test"
                         '''
                 }
             }

@@ -22,3 +22,4 @@ echo "Docker installed"
 sudo service docker start
 # add ubuntu to the docker group
 sudo usermod -aG docker ubuntu
+
