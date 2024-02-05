@@ -8,9 +8,6 @@ pipeline {
     stages {
         stage('Source') {
             steps {
-                echo 'Source: Executing Git checkout...'
-                // Execute Git checkout of your GitHub repository
-                git url: 'https://github.com/LaraTunc/wcd-6-cicd-w-jenkins'
                 echo 'Getting requirements'
                 script {
                     // Create and activate a virtual environment
