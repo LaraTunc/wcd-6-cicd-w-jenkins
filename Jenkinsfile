@@ -30,7 +30,7 @@ pipeline {
                 sh '''
                     . ${VIRTUALENV}/bin/activate
                     docker login --username ${DOCKER_CRED_USR} --password ${DOCKER_CRED_PSW}
-                    docker build -t ${DOCKER_CRED_USR}/webpage:latest -f Dockerfile .
+                    docker build -t ${DOCKER_CRED_USR}/webpage:latest -f app/Dockerfile .
                     docker push ${DOCKER_CRED_USR}/webpage:latest
                 '''
             }
