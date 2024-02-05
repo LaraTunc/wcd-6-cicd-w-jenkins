@@ -4,12 +4,12 @@ app = Flask(__name__)
 
 @app.route("/")
 def main():
-    return "Welcome Weclouddata! v0.6"
+    return "Success! Welcome My App!"
 
 
-@app.route('/courses')
+@app.route('/hello')
 def courses():
-    return 'DevOps'
+    return 'HELLO WORLD!'
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=80)
