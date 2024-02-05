@@ -6,9 +6,12 @@ pipeline {
     }
     
     stages {
-        stage('preparing') {
+        stage('Source') {
             steps {
-                echo 'preparing..'
+                echo 'Source: Executing Git checkout...'
+                // Execute Git checkout of your GitHub repository
+                git url: 'https://github.com/LaraTunc/wcd-6-cicd-w-jenkins'
+                echo 'Getting requirements'
                 script {
                     // Create and activate a virtual environment
                     sh '''
@@ -19,12 +22,24 @@ pipeline {
                 }
             }
         }
-        stage('Test') {
-            when {
-                expression {
-                    return env.BRANCH_NAME == 'develop' || 'main';
+        stage('Build') {
+
+            environment {
+                DOCKER_CRED = credentials('Docker_Cred')
                 }
+
+            steps {
+                echo 'Build: Building Docker image...'
+                sh '''
+                    . ${VIRTUALENV}/bin/activate
+                    docker login --username ${DOCKER_CRED_USR} --password ${DOCKER_CRED_PSW}
+                    docker build -t ${DOCKER_CRED_USR}/webpage:latest -f Dockerfile .
+                    docker push ${DOCKER_CRED_USR}/webpage:latest
+                '''
             }
+        }
+   
+        stage('Test') {
             steps {
                 echo 'In ' + env.BRANCH_NAME + ' branch, testing..'
                 script {
@@ -35,51 +50,48 @@ pipeline {
                         python3 -m coverage report
                     '''
                 }
+                // Stop pipeline if tests fail 
+                catchError {
+                    error 'Tests failed!'
+                }
                 
             }
         }
-        stage('Build'){
+
+        stage('Push') {
 
             environment {
-                DOCKER_CRED = credentials('fdb07d67-4ecd-452b-ac11-f9efc9d78f3e')
+                DOCKER_CRED = credentials('Docker_Cred')
                 }
-            
-            steps{
-                echo 'Building'
-                sh '''
-                    . ${VIRTUALENV}/bin/activate
-                    docker login --username ${DOCKER_CRED_USR} --password ${DOCKER_CRED_PSW}
-                    docker build -t ${DOCKER_CRED_USR}/webpage:latest -f Dockerfile .
-                    docker push ${DOCKER_CRED_USR}/webpage:latest
-                '''
+
+            steps {
+                echo 'Push: Pushing Docker image...'
+                script {
+                    // Push the newly built Docker image to Docker Hub repo
+                    sh '''
+                        . ${VIRTUALENV}/bin/activate
+                        docker push ${DOCKER_CRED_USR}/webpage:latest
+                    '''
+                }
             }
         }
+
         stage('Deploy'){
 
             environment {
-                STAGING_INSTANCE_IP = credentials('STAGING_INSTANCE_IP')
-                PROD_INSTANCE_IP = credentials('PROD_INSTANCE_IP')
-                DOCKER_CRED = credentials('fdb07d67-4ecd-452b-ac11-f9efc9d78f3e')
+                DEPLOYMENT_INSTANCE_IP = credentials('Deployment_Instance_IP')
+                DOCKER_CRED = credentials('Docker_Cred')
                 }
             steps{
                 script{
                     echo 'Deploying'
-                    if (env.BRANCH_NAME == 'develop'){
+
                     sh '''
                         eval "$(ssh-agent -s)"
                         ssh-add ~/.ssh/id_rsa
-                        ssh -o StrictHostKeyChecking=no ubuntu@$STAGING_INSTANCE_IP "docker ps -a --format '{{.Names}}' | grep -q my-container && docker stop my-container && docker rm my-container || true"
-                        ssh -o StrictHostKeyChecking=no ubuntu@$STAGING_INSTANCE_IP "docker pull $DOCKER_CRED_USR/webpage:latest && docker run --name my-container -d -p 80:80 $DOCKER_CRED_USR/webpage:latest"
+                        ssh -o StrictHostKeyChecking=no ubuntu@$DEPLOYMENT_INSTANCE_IP "docker ps -a --format '{{.Names}}' | grep -q my-container && docker stop my-container && docker rm my-container || true"
+                        ssh -o StrictHostKeyChecking=no ubuntu@$DEPLOYMENT_INSTANCE_IP "docker pull $DOCKER_CRED_USR/webpage:latest && docker run --name my-container -d -p 80:80 $DOCKER_CRED_USR/webpage:latest"
                         '''
-                    }
-                    else if (env.BRANCH_NAME == 'main'){
-                    sh '''
-                        eval "$(ssh-agent -s)"
-                        ssh-add ~/.ssh/id_rsa
-                        ssh -o StrictHostKeyChecking=no ubuntu@$PROD_INSTANCE_IP "docker ps -a --format '{{.Names}}' | grep -q my-container && docker stop my-container && docker rm my-container || true"
-                        ssh -o StrictHostKeyChecking=no ubuntu@$PROD_INSTANCE_IP "docker pull $DOCKER_CRED_USR/webpage:latest && docker run --name my-container -d -p 80:80 $DOCKER_CRED_USR/webpage:latest"
-                        '''
-                    }
                 }
             }
         }
