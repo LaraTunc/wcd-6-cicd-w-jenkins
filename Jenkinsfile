@@ -14,7 +14,7 @@ pipeline {
                     sh '''
                         python3 -m venv ${VIRTUALENV}
                         . ${VIRTUALENV}/bin/activate
-                        pip install -r requirements.txt
+                        pip install -r app/requirements.txt
                     '''
                 }
             }
